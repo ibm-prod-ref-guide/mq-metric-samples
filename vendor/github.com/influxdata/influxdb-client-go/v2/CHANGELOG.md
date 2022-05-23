@@ -1,4 +1,21 @@
-## 2.8.0 [2022-01-18]
+## 2.9.0 [2022-05-20]
+### Features
+- [#323](https://github.com/influxdata/influxdb-client-go/pull/323) Added `TasksAPI.CreateTaskByFlux` to allow full control of task script.
+- [#328](https://github.com/influxdata/influxdb-client-go/pull/328) Added `Client.SetupWithToken` allowing to specify a custom token.
+
+### Bug fixes
+- [#324](https://github.com/influxdata/influxdb-client-go/issues/324) Non-empty error channel will not block writes 
+
+## 2.8.2 [2022-04-19]
+### Bug fixes
+- [#319](https://github.com/influxdata/influxdb-client-go/pull/319) Synchronize `WriteAPIImpl.Close` to prevent panic when closing client by multiple go-routines.
+
+## 2.8.1 [2022-03-21]
+### Bug fixes
+- [#311](https://github.com/influxdata/influxdb-client-go/pull/311) Correctly unwrapping http.Error from Server API calls
+- [#315](https://github.com/influxdata/influxdb-client-go/pull/315) Masking authorization token in log
+
+## 2.8.0 [2022-02-18]
 ### Features
 - [#304](https://github.com/influxdata/influxdb-client-go/pull/304) Added public constructor for `QueryTableResult`
 - [#307](https://github.com/influxdata/influxdb-client-go/pull/307) Synced generated server API with the latest [oss.yml](https://github.com/influxdata/openapi/blob/master/contracts/oss.yml). 
