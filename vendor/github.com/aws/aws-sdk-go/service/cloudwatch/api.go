@@ -1637,14 +1637,25 @@ func (c *CloudWatch) GetMetricDataRequest(input *GetMetricDataInput) (req *reque
 
 // GetMetricData API operation for Amazon CloudWatch.
 //
-// You can use the GetMetricData API to retrieve as many as 500 different metrics
-// in a single request, with a total of as many as 100,800 data points. You
-// can also optionally perform math expressions on the values of the returned
-// statistics, to create new time series that represent new insights into your
-// data. For example, using Lambda metrics, you could divide the Errors metric
-// by the Invocations metric to get an error rate time series. For more information
-// about metric math expressions, see Metric Math Syntax and Functions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/using-metric-math.html#metric-math-syntax)
+// You can use the GetMetricData API to retrieve CloudWatch metric values. The
+// operation can also include a CloudWatch Metrics Insights query, and one or
+// more metric math functions.
+//
+// A GetMetricData operation that does not include a query can retrieve as many
+// as 500 different metrics in a single request, with a total of as many as
+// 100,800 data points. You can also optionally perform metric math expressions
+// on the values of the returned statistics, to create new time series that
+// represent new insights into your data. For example, using Lambda metrics,
+// you could divide the Errors metric by the Invocations metric to get an error
+// rate time series. For more information about metric math expressions, see
+// Metric Math Syntax and Functions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/using-metric-math.html#metric-math-syntax)
 // in the Amazon CloudWatch User Guide.
+//
+// If you include a Metrics Insights query, each GetMetricData operation can
+// include only one query. But the same GetMetricData operation can also retrieve
+// other metrics. Metrics Insights queries can query only the most recent three
+// hours of metric data. For more information about Metrics Insights, see Query
+// your metrics with CloudWatch Metrics Insights (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/query_with_cloudwatch-metrics-insights.html).
 //
 // Calls to the GetMetricData API have a different pricing structure than calls
 // to GetMetricStatistics. For more information about pricing, see Amazon CloudWatch
@@ -1679,6 +1690,17 @@ func (c *CloudWatch) GetMetricDataRequest(input *GetMetricDataInput) (req *reque
 // returns only data that was collected with that unit specified. If you specify
 // a unit that does not match the data collected, the results of the operation
 // are null. CloudWatch does not perform unit conversions.
+//
+// Using Metrics Insights queries with metric math
+//
+// You can't mix a Metric Insights query and metric math syntax in the same
+// expression, but you can reference results from a Metrics Insights query within
+// other Metric math expressions. A Metrics Insights query without a GROUP BY
+// clause returns a single time-series (TS), and can be used as input for a
+// metric math expression that expects a single time series. A Metrics Insights
+// query with a GROUP BY clause returns an array of time-series (TS[]), and
+// can be used as input for a metric math expression that expects an array of
+// time series.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2764,7 +2786,9 @@ func (c *CloudWatch) PutCompositeAlarmRequest(input *PutCompositeAlarmInput) (re
 // ALARM state only if all conditions of the rule are met.
 //
 // The alarms specified in a composite alarm's rule expression can include metric
-// alarms and other composite alarms.
+// alarms and other composite alarms. The rule expression of a composite alarm
+// can include as many as 100 underlying alarms. Any single alarm can be included
+// in the rule expressions of as many as 150 composite alarms.
 //
 // Using composite alarms can reduce alarm noise. You can create multiple metric
 // alarms, and also create a composite alarm and set up alerts only for the
@@ -3351,6 +3375,12 @@ func (c *CloudWatch) PutMetricStreamRequest(input *PutMetricStreamInput) (req *r
 //    the namespaces that you list in ExcludeFilters.
 //
 //    * Stream metrics from only the metric namespaces that you list in IncludeFilters.
+//
+// By default, a metric stream always sends the MAX, MIN, SUM, and SAMPLECOUNT
+// statistics for each metric that is streamed. You can use the StatisticsConfigurations
+// parameter to have the metric stream also send additional statistics in the
+// stream. Streaming additional statistics incurs additional costs. For more
+// information, see Amazon CloudWatch Pricing (https://aws.amazon.com/cloudwatch/pricing/).
 //
 // When you use PutMetricStream to create a new metric stream, the stream is
 // created in the running state. If you use it to update an existing stream,
@@ -4133,6 +4163,40 @@ type CompositeAlarm struct {
 	// state.
 	ActionsEnabled *bool `type:"boolean"`
 
+	// When the value is ALARM, it means that the actions are suppressed because
+	// the suppressor alarm is in ALARM When the value is WaitPeriod, it means that
+	// the actions are suppressed because the composite alarm is waiting for the
+	// suppressor alarm to go into into the ALARM state. The maximum waiting time
+	// is as specified in ActionsSuppressorWaitPeriod. After this time, the composite
+	// alarm performs its actions. When the value is ExtensionPeriod, it means that
+	// the actions are suppressed because the composite alarm is waiting after the
+	// suppressor alarm went out of the ALARM state. The maximum waiting time is
+	// as specified in ActionsSuppressorExtensionPeriod. After this time, the composite
+	// alarm performs its actions.
+	ActionsSuppressedBy *string `type:"string" enum:"ActionsSuppressedBy"`
+
+	// Captures the reason for action suppression.
+	ActionsSuppressedReason *string `type:"string"`
+
+	// Actions will be suppressed if the suppressor alarm is in the ALARM state.
+	// ActionsSuppressor can be an AlarmName or an Amazon Resource Name (ARN) from
+	// an existing alarm.
+	ActionsSuppressor *string `min:"1" type:"string"`
+
+	// The maximum time in seconds that the composite alarm waits after suppressor
+	// alarm goes out of the ALARM state. After this time, the composite alarm performs
+	// its actions.
+	//
+	// ExtensionPeriod is required only when ActionsSuppressor is specified.
+	ActionsSuppressorExtensionPeriod *int64 `type:"integer"`
+
+	// The maximum time in seconds that the composite alarm waits for the suppressor
+	// alarm to go into the ALARM state. After this time, the composite alarm performs
+	// its actions.
+	//
+	// WaitPeriod is required only when ActionsSuppressor is specified.
+	ActionsSuppressorWaitPeriod *int64 `type:"integer"`
+
 	// The actions to execute when this alarm transitions to the ALARM state from
 	// any other state. Each action is specified as an Amazon Resource Name (ARN).
 	AlarmActions []*string `type:"list"`
@@ -4167,7 +4231,10 @@ type CompositeAlarm struct {
 	// An explanation for the alarm state, in JSON format.
 	StateReasonData *string `type:"string"`
 
-	// The time stamp of the last update to the alarm state.
+	// The timestamp of the last change to the alarm's StateValue.
+	StateTransitionedTimestamp *time.Time `type:"timestamp"`
+
+	// Tracks the timestamp of any state update, even if StateValue doesn't change.
 	StateUpdatedTimestamp *time.Time `type:"timestamp"`
 
 	// The state value for the alarm.
@@ -4195,6 +4262,36 @@ func (s CompositeAlarm) GoString() string {
 // SetActionsEnabled sets the ActionsEnabled field's value.
 func (s *CompositeAlarm) SetActionsEnabled(v bool) *CompositeAlarm {
 	s.ActionsEnabled = &v
+	return s
+}
+
+// SetActionsSuppressedBy sets the ActionsSuppressedBy field's value.
+func (s *CompositeAlarm) SetActionsSuppressedBy(v string) *CompositeAlarm {
+	s.ActionsSuppressedBy = &v
+	return s
+}
+
+// SetActionsSuppressedReason sets the ActionsSuppressedReason field's value.
+func (s *CompositeAlarm) SetActionsSuppressedReason(v string) *CompositeAlarm {
+	s.ActionsSuppressedReason = &v
+	return s
+}
+
+// SetActionsSuppressor sets the ActionsSuppressor field's value.
+func (s *CompositeAlarm) SetActionsSuppressor(v string) *CompositeAlarm {
+	s.ActionsSuppressor = &v
+	return s
+}
+
+// SetActionsSuppressorExtensionPeriod sets the ActionsSuppressorExtensionPeriod field's value.
+func (s *CompositeAlarm) SetActionsSuppressorExtensionPeriod(v int64) *CompositeAlarm {
+	s.ActionsSuppressorExtensionPeriod = &v
+	return s
+}
+
+// SetActionsSuppressorWaitPeriod sets the ActionsSuppressorWaitPeriod field's value.
+func (s *CompositeAlarm) SetActionsSuppressorWaitPeriod(v int64) *CompositeAlarm {
+	s.ActionsSuppressorWaitPeriod = &v
 	return s
 }
 
@@ -4255,6 +4352,12 @@ func (s *CompositeAlarm) SetStateReason(v string) *CompositeAlarm {
 // SetStateReasonData sets the StateReasonData field's value.
 func (s *CompositeAlarm) SetStateReasonData(v string) *CompositeAlarm {
 	s.StateReasonData = &v
+	return s
+}
+
+// SetStateTransitionedTimestamp sets the StateTransitionedTimestamp field's value.
+func (s *CompositeAlarm) SetStateTransitionedTimestamp(v time.Time) *CompositeAlarm {
+	s.StateTransitionedTimestamp = &v
 	return s
 }
 
@@ -4937,7 +5040,7 @@ type DescribeAlarmHistoryInput struct {
 	// Use this parameter to specify whether you want the operation to return metric
 	// alarms or composite alarms. If you omit this parameter, only metric alarms
 	// are returned.
-	AlarmTypes []*string `type:"list"`
+	AlarmTypes []*string `type:"list" enum:"AlarmType"`
 
 	// The ending date to retrieve alarm history.
 	EndDate *time.Time `type:"timestamp"`
@@ -5261,7 +5364,7 @@ type DescribeAlarmsInput struct {
 	// Use this parameter to specify whether you want the operation to return metric
 	// alarms or composite alarms. If you omit this parameter, only metric alarms
 	// are returned.
-	AlarmTypes []*string `type:"list"`
+	AlarmTypes []*string `type:"list" enum:"AlarmType"`
 
 	// If you use this parameter and specify the name of a composite alarm, the
 	// operation returns information about the "children" alarms of the alarm you
@@ -5459,7 +5562,7 @@ type DescribeAnomalyDetectorsInput struct {
 
 	// The anomaly detector types to request when using DescribeAnomalyDetectorsInput.
 	// If empty, defaults to SINGLE_METRIC.
-	AnomalyDetectorTypes []*string `type:"list"`
+	AnomalyDetectorTypes []*string `type:"list" enum:"AnomalyDetectorType"`
 
 	// Limits the results to only the anomaly detection models that are associated
 	// with the specified metric dimensions. If there are multiple metrics that
@@ -5709,14 +5812,19 @@ func (s *DescribeInsightRulesOutput) SetNextToken(v string) *DescribeInsightRule
 }
 
 // A dimension is a name/value pair that is part of the identity of a metric.
-// You can assign up to 10 dimensions to a metric. Because dimensions are part
-// of the unique identifier for a metric, whenever you add a unique name/value
-// pair to one of your metrics, you are creating a new variation of that metric.
+// Because dimensions are part of the unique identifier for a metric, whenever
+// you add a unique name/value pair to one of your metrics, you are creating
+// a new variation of that metric. For example, many Amazon EC2 metrics publish
+// InstanceId as a dimension name, and the actual instance ID as the value for
+// that dimension.
+//
+// You can assign up to 10 dimensions to a metric.
 type Dimension struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the dimension. Dimension names must contain only ASCII characters
-	// and must include at least one non-whitespace character.
+	// The name of the dimension. Dimension names must contain only ASCII characters,
+	// must include at least one non-whitespace character, and cannot start with
+	// a colon (:).
 	//
 	// Name is a required field
 	Name *string `min:"1" type:"string" required:"true"`
@@ -6499,8 +6607,8 @@ type GetMetricDataInput struct {
 
 	// The metric queries to be returned. A single GetMetricData call can include
 	// as many as 500 MetricDataQuery structures. Each of these structures can specify
-	// either a metric to retrieve, or a math expression to perform on retrieved
-	// data.
+	// either a metric to retrieve, a Metrics Insights query, or a math expression
+	// to perform on retrieved data.
 	//
 	// MetricDataQueries is a required field
 	MetricDataQueries []*MetricDataQuery `type:"list" required:"true"`
@@ -6789,7 +6897,7 @@ type GetMetricStatisticsInput struct {
 	// The metric statistics, other than percentile. For percentile statistics,
 	// use ExtendedStatistics. When calling GetMetricStatistics, you must specify
 	// either Statistics or ExtendedStatistics, but not both.
-	Statistics []*string `min:"1" type:"list"`
+	Statistics []*string `min:"1" type:"list" enum:"Statistic"`
 
 	// The unit for a given metric. If you omit Unit, all data that was collected
 	// with any unit is returned, along with the corresponding units that were specified
@@ -7040,6 +7148,9 @@ type GetMetricStreamOutput struct {
 	// The name of the metric stream.
 	Name *string `min:"1" type:"string"`
 
+	// The output format for the stream. Valid values are json and opentelemetry0.7.
+	// For more information about metric stream output formats, see Metric streams
+	// output formats (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-metric-streams-formats.html).
 	OutputFormat *string `min:"1" type:"string" enum:"MetricStreamOutputFormat"`
 
 	// The ARN of the IAM role that is used by this metric stream.
@@ -7047,6 +7158,11 @@ type GetMetricStreamOutput struct {
 
 	// The state of the metric stream. The possible values are running and stopped.
 	State *string `type:"string"`
+
+	// Each entry in this array displays information about one or more metrics that
+	// include additional statistics in the metric stream. For more information
+	// about the additional statistics, see CloudWatch statistics definitions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html.html).
+	StatisticsConfigurations []*MetricStreamStatisticsConfiguration `type:"list"`
 }
 
 // String returns the string representation.
@@ -7124,6 +7240,12 @@ func (s *GetMetricStreamOutput) SetRoleArn(v string) *GetMetricStreamOutput {
 // SetState sets the State field's value.
 func (s *GetMetricStreamOutput) SetState(v string) *GetMetricStreamOutput {
 	s.State = &v
+	return s
+}
+
+// SetStatisticsConfigurations sets the StatisticsConfigurations field's value.
+func (s *GetMetricStreamOutput) SetStatisticsConfigurations(v []*MetricStreamStatisticsConfiguration) *GetMetricStreamOutput {
+	s.StatisticsConfigurations = v
 	return s
 }
 
@@ -8235,8 +8357,11 @@ type MetricAlarm struct {
 	// function used as the threshold for the alarm.
 	ThresholdMetricId *string `min:"1" type:"string"`
 
-	// Sets how this alarm is to handle missing data points. If this parameter is
-	// omitted, the default behavior of missing is used.
+	// Sets how this alarm is to handle missing data points. The valid values are
+	// breaching, notBreaching, ignore, and missing. For more information, see Configuring
+	// how CloudWatch alarms treat missing data (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html#alarms-and-missing-data).
+	//
+	// If this parameter is omitted, the default behavior of missing is used.
 	TreatMissingData *string `min:"1" type:"string"`
 
 	// The unit of the metric associated with the alarm.
@@ -8428,8 +8553,8 @@ func (s *MetricAlarm) SetUnit(v string) *MetricAlarm {
 //
 // When used in GetMetricData, it indicates the metric data to return, and whether
 // this call is just retrieving a batch set of data for one metric, or is performing
-// a math expression on metric data. A single GetMetricData call can include
-// up to 500 MetricDataQuery structures.
+// a Metrics Insights query or a math expression. A single GetMetricData call
+// can include up to 500 MetricDataQuery structures.
 //
 // When used in PutMetricAlarm, it enables you to create an alarm based on a
 // metric math expression. Each MetricDataQuery in the array specifies either
@@ -8458,11 +8583,16 @@ type MetricDataQuery struct {
 	// operations.
 	AccountId *string `min:"1" type:"string"`
 
-	// The math expression to be performed on the returned data, if this object
-	// is performing a math expression. This expression can use the Id of the other
-	// metrics to refer to those metrics, and can also use the Id of other expressions
-	// to use the result of those expressions. For more information about metric
-	// math expressions, see Metric Math Syntax and Functions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/using-metric-math.html#metric-math-syntax)
+	// This field can contain either a Metrics Insights query, or a metric math
+	// expression to be performed on the returned data. For more information about
+	// Metrics Insights queries, see Metrics Insights query components and syntax
+	// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch-metrics-insights-querylanguage)
+	// in the Amazon CloudWatch User Guide.
+	//
+	// A math expression can use the Id of the other metrics or queries to refer
+	// to those metrics, and can also use the Id of other expressions to use the
+	// result of those expressions. For more information about metric math expressions,
+	// see Metric Math Syntax and Functions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/using-metric-math.html#metric-math-syntax)
 	// in the Amazon CloudWatch User Guide.
 	//
 	// Within each MetricDataQuery object, you must specify either Expression or
@@ -9179,6 +9309,164 @@ func (s *MetricStreamFilter) SetNamespace(v string) *MetricStreamFilter {
 	return s
 }
 
+// By default, a metric stream always sends the MAX, MIN, SUM, and SAMPLECOUNT
+// statistics for each metric that is streamed. This structure contains information
+// for one metric that includes additional statistics in the stream. For more
+// information about statistics, see CloudWatch, listed in CloudWatch statistics
+// definitions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html.html).
+type MetricStreamStatisticsConfiguration struct {
+	_ struct{} `type:"structure"`
+
+	// The list of additional statistics that are to be streamed for the metrics
+	// listed in the IncludeMetrics array in this structure. This list can include
+	// as many as 20 statistics.
+	//
+	// If the OutputFormat for the stream is opentelemetry0.7, the only valid values
+	// are p?? percentile statistics such as p90, p99 and so on.
+	//
+	// If the OutputFormat for the stream is json, the valid values include the
+	// abbreviations for all of the statistics listed in CloudWatch statistics definitions
+	// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html.html).
+	// For example, this includes tm98, wm90, PR(:300), and so on.
+	//
+	// AdditionalStatistics is a required field
+	AdditionalStatistics []*string `type:"list" required:"true"`
+
+	// An array of metric name and namespace pairs that stream the additional statistics
+	// listed in the value of the AdditionalStatistics parameter. There can be as
+	// many as 100 pairs in the array.
+	//
+	// All metrics that match the combination of metric name and namespace will
+	// be streamed with the additional statistics, no matter their dimensions.
+	//
+	// IncludeMetrics is a required field
+	IncludeMetrics []*MetricStreamStatisticsMetric `type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricStreamStatisticsConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricStreamStatisticsConfiguration) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MetricStreamStatisticsConfiguration) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MetricStreamStatisticsConfiguration"}
+	if s.AdditionalStatistics == nil {
+		invalidParams.Add(request.NewErrParamRequired("AdditionalStatistics"))
+	}
+	if s.IncludeMetrics == nil {
+		invalidParams.Add(request.NewErrParamRequired("IncludeMetrics"))
+	}
+	if s.IncludeMetrics != nil {
+		for i, v := range s.IncludeMetrics {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "IncludeMetrics", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAdditionalStatistics sets the AdditionalStatistics field's value.
+func (s *MetricStreamStatisticsConfiguration) SetAdditionalStatistics(v []*string) *MetricStreamStatisticsConfiguration {
+	s.AdditionalStatistics = v
+	return s
+}
+
+// SetIncludeMetrics sets the IncludeMetrics field's value.
+func (s *MetricStreamStatisticsConfiguration) SetIncludeMetrics(v []*MetricStreamStatisticsMetric) *MetricStreamStatisticsConfiguration {
+	s.IncludeMetrics = v
+	return s
+}
+
+// This object contains the information for one metric that is to be streamed
+// with additional statistics.
+type MetricStreamStatisticsMetric struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the metric.
+	//
+	// MetricName is a required field
+	MetricName *string `min:"1" type:"string" required:"true"`
+
+	// The namespace of the metric.
+	//
+	// Namespace is a required field
+	Namespace *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricStreamStatisticsMetric) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricStreamStatisticsMetric) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MetricStreamStatisticsMetric) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MetricStreamStatisticsMetric"}
+	if s.MetricName == nil {
+		invalidParams.Add(request.NewErrParamRequired("MetricName"))
+	}
+	if s.MetricName != nil && len(*s.MetricName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("MetricName", 1))
+	}
+	if s.Namespace == nil {
+		invalidParams.Add(request.NewErrParamRequired("Namespace"))
+	}
+	if s.Namespace != nil && len(*s.Namespace) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Namespace", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMetricName sets the MetricName field's value.
+func (s *MetricStreamStatisticsMetric) SetMetricName(v string) *MetricStreamStatisticsMetric {
+	s.MetricName = &v
+	return s
+}
+
+// SetNamespace sets the Namespace field's value.
+func (s *MetricStreamStatisticsMetric) SetNamespace(v string) *MetricStreamStatisticsMetric {
+	s.Namespace = &v
+	return s
+}
+
 // This array is empty if the API operation was successful for all the rules
 // specified in the request. If the operation could not process one of the rules,
 // the following data is returned for each of those rules.
@@ -9439,6 +9727,25 @@ type PutCompositeAlarmInput struct {
 	// state of the composite alarm. The default is TRUE.
 	ActionsEnabled *bool `type:"boolean"`
 
+	// Actions will be suppressed if the suppressor alarm is in the ALARM state.
+	// ActionsSuppressor can be an AlarmName or an Amazon Resource Name (ARN) from
+	// an existing alarm.
+	ActionsSuppressor *string `min:"1" type:"string"`
+
+	// The maximum time in seconds that the composite alarm waits after suppressor
+	// alarm goes out of the ALARM state. After this time, the composite alarm performs
+	// its actions.
+	//
+	// ExtensionPeriod is required only when ActionsSuppressor is specified.
+	ActionsSuppressorExtensionPeriod *int64 `type:"integer"`
+
+	// The maximum time in seconds that the composite alarm waits for the suppressor
+	// alarm to go into the ALARM state. After this time, the composite alarm performs
+	// its actions.
+	//
+	// WaitPeriod is required only when ActionsSuppressor is specified.
+	ActionsSuppressorWaitPeriod *int64 `type:"integer"`
+
 	// The actions to execute when this alarm transitions to the ALARM state from
 	// any other state. Each action is specified as an Amazon Resource Name (ARN).
 	//
@@ -9551,6 +9858,9 @@ func (s PutCompositeAlarmInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *PutCompositeAlarmInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "PutCompositeAlarmInput"}
+	if s.ActionsSuppressor != nil && len(*s.ActionsSuppressor) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ActionsSuppressor", 1))
+	}
 	if s.AlarmName == nil {
 		invalidParams.Add(request.NewErrParamRequired("AlarmName"))
 	}
@@ -9583,6 +9893,24 @@ func (s *PutCompositeAlarmInput) Validate() error {
 // SetActionsEnabled sets the ActionsEnabled field's value.
 func (s *PutCompositeAlarmInput) SetActionsEnabled(v bool) *PutCompositeAlarmInput {
 	s.ActionsEnabled = &v
+	return s
+}
+
+// SetActionsSuppressor sets the ActionsSuppressor field's value.
+func (s *PutCompositeAlarmInput) SetActionsSuppressor(v string) *PutCompositeAlarmInput {
+	s.ActionsSuppressor = &v
+	return s
+}
+
+// SetActionsSuppressorExtensionPeriod sets the ActionsSuppressorExtensionPeriod field's value.
+func (s *PutCompositeAlarmInput) SetActionsSuppressorExtensionPeriod(v int64) *PutCompositeAlarmInput {
+	s.ActionsSuppressorExtensionPeriod = &v
+	return s
+}
+
+// SetActionsSuppressorWaitPeriod sets the ActionsSuppressorWaitPeriod field's value.
+func (s *PutCompositeAlarmInput) SetActionsSuppressorWaitPeriod(v int64) *PutCompositeAlarmInput {
+	s.ActionsSuppressorWaitPeriod = &v
 	return s
 }
 
@@ -10079,6 +10407,11 @@ type PutMetricAlarmInput struct {
 	// see Configuring How CloudWatch Alarms Treats Missing Data (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html#alarms-and-missing-data).
 	//
 	// Valid Values: breaching | notBreaching | ignore | missing
+	//
+	// Alarms that evaluate metrics in the AWS/DynamoDB namespace always ignore
+	// missing data even if you choose a different option for TreatMissingData.
+	// When an AWS/DynamoDB metric has missing data, alarms that evaluate that metric
+	// remain in their current state.
 	TreatMissingData *string `min:"1" type:"string"`
 
 	// The unit of measure for the statistic. For example, the units for the Amazon
@@ -10501,6 +10834,20 @@ type PutMetricStreamInput struct {
 	// RoleArn is a required field
 	RoleArn *string `min:"1" type:"string" required:"true"`
 
+	// By default, a metric stream always sends the MAX, MIN, SUM, and SAMPLECOUNT
+	// statistics for each metric that is streamed. You can use this parameter to
+	// have the metric stream also send additional statistics in the stream. This
+	// array can have up to 100 members.
+	//
+	// For each entry in this array, you specify one or more metrics and the list
+	// of additional statistics to stream for those metrics. The additional statistics
+	// that you can stream depend on the stream's OutputFormat. If the OutputFormat
+	// is json, you can stream any additional statistic that is supported by CloudWatch,
+	// listed in CloudWatch statistics definitions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html.html).
+	// If the OutputFormat is opentelemetry0.7, you can stream percentile statistics
+	// such as p95, p99.9 and so on.
+	StatisticsConfigurations []*MetricStreamStatisticsConfiguration `type:"list"`
+
 	// A list of key-value pairs to associate with the metric stream. You can associate
 	// as many as 50 tags with a metric stream.
 	//
@@ -10581,6 +10928,16 @@ func (s *PutMetricStreamInput) Validate() error {
 			}
 		}
 	}
+	if s.StatisticsConfigurations != nil {
+		for i, v := range s.StatisticsConfigurations {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "StatisticsConfigurations", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
 	if s.Tags != nil {
 		for i, v := range s.Tags {
 			if v == nil {
@@ -10631,6 +10988,12 @@ func (s *PutMetricStreamInput) SetOutputFormat(v string) *PutMetricStreamInput {
 // SetRoleArn sets the RoleArn field's value.
 func (s *PutMetricStreamInput) SetRoleArn(v string) *PutMetricStreamInput {
 	s.RoleArn = &v
+	return s
+}
+
+// SetStatisticsConfigurations sets the StatisticsConfigurations field's value.
+func (s *PutMetricStreamInput) SetStatisticsConfigurations(v []*MetricStreamStatisticsConfiguration) *PutMetricStreamInput {
+	s.StatisticsConfigurations = v
 	return s
 }
 
@@ -11425,6 +11788,26 @@ func (s UntagResourceOutput) String() string {
 // value will be replaced with "sensitive".
 func (s UntagResourceOutput) GoString() string {
 	return s.String()
+}
+
+const (
+	// ActionsSuppressedByWaitPeriod is a ActionsSuppressedBy enum value
+	ActionsSuppressedByWaitPeriod = "WaitPeriod"
+
+	// ActionsSuppressedByExtensionPeriod is a ActionsSuppressedBy enum value
+	ActionsSuppressedByExtensionPeriod = "ExtensionPeriod"
+
+	// ActionsSuppressedByAlarm is a ActionsSuppressedBy enum value
+	ActionsSuppressedByAlarm = "Alarm"
+)
+
+// ActionsSuppressedBy_Values returns all elements of the ActionsSuppressedBy enum
+func ActionsSuppressedBy_Values() []string {
+	return []string{
+		ActionsSuppressedByWaitPeriod,
+		ActionsSuppressedByExtensionPeriod,
+		ActionsSuppressedByAlarm,
+	}
 }
 
 const (
