@@ -30,8 +30,8 @@ package ibmmq
 ****************************************************************
 *
 *   <BEGIN_BUILDINFO>
-*   Generated on:  2/7/22 6:36 PM
-*   Build Level:   p925-L220207
+*   Generated on:  9/29/22 4:30 PM
+*   Build Level:   p931-L220929.1
 *   Build Type:    Production
 *   <END_BUILDINFO>
  */
@@ -617,6 +617,7 @@ const (
 	MQCA_ENV_DATA                  int32  = 2007
 	MQCA_FIRST                     int32  = 2001
 	MQCA_IGQ_USER_ID               int32  = 2041
+	MQCA_INITIAL_KEY               int32  = 2054
 	MQCA_INITIATION_Q_NAME         int32  = 2008
 	MQCA_INSTALLATION_DESC         int32  = 2115
 	MQCA_INSTALLATION_NAME         int32  = 2116
@@ -674,6 +675,7 @@ const (
 	MQCA_SSL_KEY_LIBRARY           int32  = 2069
 	MQCA_SSL_KEY_MEMBER            int32  = 2070
 	MQCA_SSL_KEY_REPOSITORY        int32  = 2049
+	MQCA_SSL_KEY_REPO_PASSWORD     int32  = 2055
 	MQCA_STDERR_DESTINATION        int32  = 2084
 	MQCA_STDOUT_DESTINATION        int32  = 2083
 	MQCA_STORAGE_CLASS             int32  = 2022
@@ -809,6 +811,8 @@ const (
 	MQCD_VERSION_7                 int32  = 7
 	MQCD_VERSION_8                 int32  = 8
 	MQCD_VERSION_9                 int32  = 9
+	MQCEX_AS_PARENT                int32  = -2
+	MQCEX_NOLIMIT                  int32  = -1
 	MQCFACCESS_DISABLED            int32  = 2
 	MQCFACCESS_ENABLED             int32  = 0
 	MQCFACCESS_SUSPENDED           int32  = 1
@@ -1019,7 +1023,7 @@ const (
 	MQCMDI_SEC_SIGNOFF_ERROR       int32  = 17
 	MQCMDI_SEC_TIMER_ZERO          int32  = 14
 	MQCMDI_SEC_UPPERCASE           int32  = 21
-	MQCMDL_CURRENT_LEVEL           int32  = 925
+	MQCMDL_CURRENT_LEVEL           int32  = 931
 	MQCMDL_LEVEL_1                 int32  = 100
 	MQCMDL_LEVEL_101               int32  = 101
 	MQCMDL_LEVEL_110               int32  = 110
@@ -1066,6 +1070,8 @@ const (
 	MQCMDL_LEVEL_923               int32  = 923
 	MQCMDL_LEVEL_924               int32  = 924
 	MQCMDL_LEVEL_925               int32  = 925
+	MQCMDL_LEVEL_930               int32  = 930
+	MQCMDL_LEVEL_931               int32  = 931
 	MQCMD_ACCOUNTING_MQI           int32  = 167
 	MQCMD_ACCOUNTING_Q             int32  = 168
 	MQCMD_ACTIVITY_MSG             int32  = 69
@@ -1355,10 +1361,12 @@ const (
 	MQCRC_TRANSID_NOT_AVAILABLE    int32  = 9
 	MQCSP_AUTH_NONE                int32  = 0
 	MQCSP_AUTH_USER_ID_AND_PWD     int32  = 1
-	MQCSP_CURRENT_LENGTH           int32  = 56
-	MQCSP_CURRENT_VERSION          int32  = 1
+	MQCSP_CURRENT_LENGTH           int32  = 80
+	MQCSP_CURRENT_VERSION          int32  = 2
 	MQCSP_LENGTH_1                 int32  = 56
+	MQCSP_LENGTH_2                 int32  = 80
 	MQCSP_VERSION_1                int32  = 1
+	MQCSP_VERSION_2                int32  = 2
 	MQCSRV_CONVERT_NO              int32  = 0
 	MQCSRV_CONVERT_YES             int32  = 1
 	MQCSRV_DLQ_NO                  int32  = 0
@@ -1562,6 +1570,7 @@ const (
 	MQFB_COD                       int32  = 260
 	MQFB_DATA_LENGTH_NEGATIVE      int32  = 292
 	MQFB_DATA_LENGTH_TOO_BIG       int32  = 293
+	MQFB_DATA_LENGTH_TOO_SHORT     int32  = 299
 	MQFB_DATA_LENGTH_ZERO          int32  = 291
 	MQFB_EXPIRATION                int32  = 258
 	MQFB_IIH_ERROR                 int32  = 296
@@ -1598,6 +1607,7 @@ const (
 	MQFC_YES                       int32  = 1
 	MQFIELD_WQR_CLWLQueuePriority  int32  = 8013
 	MQFIELD_WQR_CLWLQueueRank      int32  = 8014
+	MQFIELD_WQR_CapExpiry          int32  = 8016
 	MQFIELD_WQR_ClusterRecOffset   int32  = 8006
 	MQFIELD_WQR_DefBind            int32  = 8009
 	MQFIELD_WQR_DefPersistence     int32  = 8010
@@ -2411,6 +2421,7 @@ const (
 	MQIA_BASE_TYPE                 int32  = 193
 	MQIA_BATCH_INTERFACE_AUTO      int32  = 86
 	MQIA_BRIDGE_EVENT              int32  = 74
+	MQIA_CAP_EXPIRY                int32  = 276
 	MQIA_CERT_VAL_POLICY           int32  = 252
 	MQIA_CF_CFCONLOS               int32  = 246
 	MQIA_CF_LEVEL                  int32  = 70
@@ -2482,7 +2493,7 @@ const (
 	MQIA_IP_ADDRESS_VERSION        int32  = 93
 	MQIA_KEY_REUSE_COUNT           int32  = 267
 	MQIA_LAST                      int32  = 2000
-	MQIA_LAST_USED                 int32  = 275
+	MQIA_LAST_USED                 int32  = 276
 	MQIA_LDAP_AUTHORMD             int32  = 263
 	MQIA_LDAP_NESTGRP              int32  = 264
 	MQIA_LDAP_SECURE_COMM          int32  = 261
@@ -4272,13 +4283,14 @@ const (
 	MQSCOPE_AS_PARENT              int32  = 1
 	MQSCOPE_QMGR                   int32  = 4
 	MQSCO_CELL                     int32  = 2
-	MQSCO_CURRENT_LENGTH           int32  = 632
-	MQSCO_CURRENT_VERSION          int32  = 5
+	MQSCO_CURRENT_LENGTH           int32  = 648
+	MQSCO_CURRENT_VERSION          int32  = 6
 	MQSCO_LENGTH_1                 int32  = 536
 	MQSCO_LENGTH_2                 int32  = 544
 	MQSCO_LENGTH_3                 int32  = 560
 	MQSCO_LENGTH_4                 int32  = 568
 	MQSCO_LENGTH_5                 int32  = 632
+	MQSCO_LENGTH_6                 int32  = 648
 	MQSCO_Q_MGR                    int32  = 1
 	MQSCO_RESET_COUNT_DEFAULT      int32  = 0
 	MQSCO_VERSION_1                int32  = 1
@@ -4286,6 +4298,7 @@ const (
 	MQSCO_VERSION_3                int32  = 3
 	MQSCO_VERSION_4                int32  = 4
 	MQSCO_VERSION_5                int32  = 5
+	MQSCO_VERSION_6                int32  = 6
 	MQSCYC_MIXED                   int32  = 1
 	MQSCYC_UPPER                   int32  = 0
 	MQSD_CURRENT_LENGTH            int32  = 344
@@ -4594,14 +4607,21 @@ const (
 	MQWQR3_LENGTH_1                int32  = 200
 	MQWQR3_LENGTH_2                int32  = 208
 	MQWQR3_LENGTH_3                int32  = 212
-	MQWQR_CURRENT_LENGTH           int32  = 212
-	MQWQR_CURRENT_VERSION          int32  = 3
+	MQWQR4_CURRENT_LENGTH          int32  = 216
+	MQWQR4_LENGTH_1                int32  = 200
+	MQWQR4_LENGTH_2                int32  = 208
+	MQWQR4_LENGTH_3                int32  = 212
+	MQWQR4_LENGTH_4                int32  = 216
+	MQWQR_CURRENT_LENGTH           int32  = 216
+	MQWQR_CURRENT_VERSION          int32  = 4
 	MQWQR_LENGTH_1                 int32  = 200
 	MQWQR_LENGTH_2                 int32  = 208
 	MQWQR_LENGTH_3                 int32  = 212
+	MQWQR_LENGTH_4                 int32  = 216
 	MQWQR_VERSION_1                int32  = 1
 	MQWQR_VERSION_2                int32  = 2
 	MQWQR_VERSION_3                int32  = 3
+	MQWQR_VERSION_4                int32  = 4
 	MQWS_CHAR                      int32  = 1
 	MQWS_DEFAULT                   int32  = 0
 	MQWS_TOPIC                     int32  = 2
@@ -4942,6 +4962,7 @@ const (
 	MQ_FUNCTION_LENGTH             int32  = 4
 	MQ_GROUP_ADDRESS_LENGTH        int32  = 264
 	MQ_GROUP_ID_LENGTH             int32  = 24
+	MQ_INITIAL_KEY_LENGTH          int32  = 256
 	MQ_INSTALLATION_DESC_LENGTH    int32  = 64
 	MQ_INSTALLATION_NAME_LENGTH    int32  = 16
 	MQ_INSTALLATION_PATH_LENGTH    int32  = 256
@@ -5025,11 +5046,13 @@ const (
 	MQ_SSL_CIPHER_SPEC_LENGTH      int32  = 32
 	MQ_SSL_CIPHER_SUITE_LENGTH     int32  = 32
 	MQ_SSL_CRYPTO_HARDWARE_LENGTH  int32  = 256
+	MQ_SSL_ENCRYP_KEY_REPO_PWD_LEN int32  = 1536
 	MQ_SSL_HANDSHAKE_STAGE_LENGTH  int32  = 32
 	MQ_SSL_KEY_LIBRARY_LENGTH      int32  = 44
 	MQ_SSL_KEY_MEMBER_LENGTH       int32  = 8
 	MQ_SSL_KEY_PASSPHRASE_LENGTH   int32  = 1024
 	MQ_SSL_KEY_REPOSITORY_LENGTH   int32  = 256
+	MQ_SSL_KEY_REPO_PWD_LEN        int32  = 1024
 	MQ_SSL_PEER_NAME_LENGTH        int32  = 1024
 	MQ_SSL_SHORT_PEER_NAME_LENGTH  int32  = 256
 	MQ_START_CODE_LENGTH           int32  = 4

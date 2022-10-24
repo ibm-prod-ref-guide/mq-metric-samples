@@ -1,5 +1,3 @@
-// +build go1.13
-
 package ibmmq
 
 /*
@@ -781,6 +779,16 @@ func MQItoString(class string, value int) string {
 			s = ""
 		}
 
+	case "CEX":
+		switch v {
+		case -2:
+			s = "MQCEX_AS_PARENT"
+		case -1:
+			s = "MQCEX_NOLIMIT"
+		default:
+			s = ""
+		}
+
 	case "CFACCESS":
 		switch v {
 		case 0:
@@ -1423,6 +1431,10 @@ func MQItoString(class string, value int) string {
 			s = "MQCMDL_LEVEL_924"
 		case 925:
 			s = "MQCMDL_LEVEL_925"
+		case 930:
+			s = "MQCMDL_LEVEL_930"
+		case 931:
+			s = "MQCMDL_LEVEL_931"
 		default:
 			s = ""
 		}
@@ -2081,6 +2093,8 @@ func MQItoString(class string, value int) string {
 			s = "MQFB_IIH_ERROR"
 		case 298:
 			s = "MQFB_NOT_AUTHORIZED_FOR_IMS"
+		case 299:
+			s = "MQFB_DATA_LENGTH_TOO_SHORT"
 		case 300:
 			s = "MQFB_IMS_ERROR"
 		case 401:
@@ -2167,6 +2181,8 @@ func MQItoString(class string, value int) string {
 			s = "MQFIELD_WQR_CLWLQueueRank"
 		case 8015:
 			s = "MQFIELD_WQR_DefPutResponse"
+		case 8016:
+			s = "MQFIELD_WQR_CapExpiry"
 		default:
 			s = ""
 		}
