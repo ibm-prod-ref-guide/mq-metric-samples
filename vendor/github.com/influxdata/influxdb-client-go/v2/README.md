@@ -13,6 +13,7 @@ This repository contains the reference Go client for InfluxDB 2.
 - [Documentation](#documentation)
     - [Examples](#examples)
 - [How To Use](#how-to-use)
+    - [Installation](#installation)
     - [Basic Example](#basic-example)
     - [Writes in Detail](#writes)
     - [Queries in Detail](#queries)
@@ -64,11 +65,17 @@ There are also other examples in the API docs:
 ### Installation
 **Go 1.17** or later is required.
 
-1.  Add the client package your to your project dependencies (go.mod).
+#### Go mod project
+1.  Add the latest version of the client package to your project dependencies (go.mod).
     ```sh
     go get github.com/influxdata/influxdb-client-go/v2
     ```
 1. Add import `github.com/influxdata/influxdb-client-go/v2` to your source code.
+#### GOPATH project
+    ```sh
+    go get github.com/influxdata/influxdb-client-go
+    ```
+Note: To have _go get_ in the GOPATH mode, the environment variable `GO111MODULE` must have the `off` value.
 
 ### Basic Example
 The following example demonstrates how to write data to InfluxDB 2 and read them back using the Flux language:
@@ -101,12 +108,17 @@ func main() {
         AddField("avg", 23.2).
         AddField("max", 45.0).
         SetTime(time.Now())
-    writeAPI.WritePoint(context.Background(), p)
-    
+    err := writeAPI.WritePoint(context.Background(), p)
+	if err != nil {
+		panic(err)
+	}
     // Or write directly line protocol
     line := fmt.Sprintf("stat,unit=temperature avg=%f,max=%f", 23.5, 45.0)
-    writeAPI.WriteRecord(context.Background(), line)
-
+    err = writeAPI.WriteRecord(context.Background(), line)
+	if err != nil {
+		panic(err)
+	}
+	
     // Get query client
     queryAPI := client.QueryAPI("my-org")
     // Get parser flux query result
@@ -124,6 +136,8 @@ func main() {
         if result.Err() != nil {
             fmt.Printf("Query error: %s\n", result.Err().Error())
         }
+    } else {
+		panic(err)
     }
     // Ensures background processes finishes
     client.Close()
@@ -236,8 +250,7 @@ It is synchronously notified in case async write fails.
 It controls further batch handling by its return value. If it returns `true`, WriteAPI continues with retrying of writes of this batch. Returned `false` means the batch should be discarded. 
 
 ### Reading async errors
-[Errors()](https://pkg.go.dev/github.com/influxdata/influxdb-client-go/v2/api#WriteAPI.Errors) method returns a channel for reading errors which occurs during async writes. This channel is unbuffered and it 
-must be read asynchronously otherwise will block write procedure:
+WriteAPI automatically logs write errors. Use [Errors()](https://pkg.go.dev/github.com/influxdata/influxdb-client-go/v2/api#WriteAPI.Errors) method, which returns the channel for reading errors occuring during async writes, for writing write error to a custom target:
 
 ```go
 package main
@@ -287,7 +300,8 @@ func main() {
 ```
 
 ### Blocking write client 
-Blocking write client writes given point(s) synchronously. It doesn't have implicit batching. Batch is created from given set of points.
+Blocking write client writes given point(s) synchronously. It doesn't do implicit batching. Batch is created from given set of points.
+Implicit batching can be enabled with `WriteAPIBlocking.EnableBatching()`.
 
 ```go
 package main
