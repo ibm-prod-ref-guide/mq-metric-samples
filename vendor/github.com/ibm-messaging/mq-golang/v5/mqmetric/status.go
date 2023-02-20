@@ -6,7 +6,7 @@ storage mechanisms including Prometheus and InfluxDB.
 package mqmetric
 
 /*
-  Copyright (c) IBM Corporation 2016, 2021
+  Copyright (c) IBM Corporation 2016, 2022
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,9 +26,10 @@ package mqmetric
 
 import (
 	"fmt"
-	ibmmq "github.com/ibm-messaging/mq-golang/v5/ibmmq"
 	"strings"
 	"time"
+
+	ibmmq "github.com/ibm-messaging/mq-golang/v5/ibmmq"
 )
 
 var statusDummy = fmt.Sprintf("dummy")
@@ -101,7 +102,7 @@ func newStatusValueString(v string) *StatusValue {
 // Go uses an example-based method for formatting and parsing timestamps
 // This layout matches the MQ PutDate and PutTime strings. An additional TZ
 // may eventually have to be turned into a config parm. Note the "15" to indicate
-// a 24-hour timestamp. There also seems to be two formats for the time layout comnig
+// a 24-hour timestamp. There also seems to be two formats for the time layout coming
 // from MQ - TPSTATUS uses a colon format time, QSTATUS uses the dots.
 const timeStampLayoutDot = "2006-01-02 15.04.05"
 const timeStampLayoutColon = "2006-01-02 15:04:05"
@@ -116,7 +117,7 @@ func statusTimeDiff(now time.Time, d string, t string) int64 {
 	ci := getConnection(GetConnectionKey())
 
 	// If there's any error in parsing the timestamp - perhaps
-	// the value has not been set yet, then just return 0
+	// the value has not been set yet - then just return 0
 	rc = 0
 
 	timeStampLayout := timeStampLayoutDot
@@ -128,11 +129,13 @@ func statusTimeDiff(now time.Time, d string, t string) int64 {
 		if err == nil {
 			diff := now.Sub(parsedT).Seconds() + ci.tzOffsetSecs
 
-			if diff < -(60 * 5) { // Cannot have status from the future but allow a tiny amount of flex
-				if !timeTravelWarningIssued {
-					logError("Status reports appear to be from the future. Difference is approximately %d seconds. Check the TZ Offset value in the program configuration.", int64(-diff))
-					//logError("statusTimeDiff d:%s t:%s diff:%f tzoffset: %f err:%v\n", d, t, diff, ci.tzOffsetSecs, err)
-					timeTravelWarningIssued = true
+			if diff < 0 {
+				if diff < -(60 * 5) { // Cannot have status from the future but allow a tiny amount of flex
+					if !timeTravelWarningIssued {
+						logError("Status reports appear to be from the future. Difference is approximately %d seconds. Check the TZ Offset value in the program configuration.", int64(-diff))
+						logDebug("statusTimeDiff d:%s t:%s diff:%f tzoffset: %f err:%v\n", d, t, diff, ci.tzOffsetSecs, err)
+						timeTravelWarningIssued = true
+					}
 				}
 				diff = 0
 			}
@@ -280,7 +283,7 @@ func statusGetIntAttributes(s *StatusSet, elem *ibmmq.PCFParameter, key string) 
 	}
 
 	// Look at the Parameter and loop through all the possible status
-	// attributes to find it.We don't break from the loop after finding a match
+	// attributes to find it. We don't break from the loop after finding a match
 	// because there might be more than one attribute associated with the
 	// attribute (in particular status/status_squash)
 	for attr, _ := range s.Attributes {
